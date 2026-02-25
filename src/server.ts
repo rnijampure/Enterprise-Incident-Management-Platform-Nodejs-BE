@@ -15,9 +15,12 @@ const startServer = async () => {
     const app = express();
 
     //  app.use(cors({ origin: "http://localhost:5173" }));
+
+    const allowedOrigin = process.env.CORS_ORIGIN || "http://localhost:5173";
+
     app.use(
       cors({
-        origin: "*",
+        origin: allowedOrigin,
       }),
     );
 
