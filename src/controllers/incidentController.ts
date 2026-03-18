@@ -2,6 +2,8 @@
 import { type Request, type Response } from "express";
 import "../models/User.js";
 import Incident from "../models/Incident.js";
+import IncidentUpdate from "../models/incident_updates.js";
+import incident_comments from "../models/incident_comments.js";
 export const getIncidents = async (req: Request, res: Response) => {
   try {
     const {
@@ -112,5 +114,39 @@ export const getIncidentById = async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ message: "Server Error", error: (error as Error).message });
+  }
+};
+
+export const getIncidentUpdates = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const updates = await IncidentUpdate.find({
+      incidentId: id,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(updates);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch updates" });
+  }
+};
+//getIncidentCommentsUpdates
+
+export const getIncidentCommentsUpdates = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const { id } = req.params;
+
+    const updates = await incident_comments
+      .find({
+        incidentId: id,
+      })
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(updates);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch updates" });
   }
 };

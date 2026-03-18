@@ -7,6 +7,7 @@ dotenv.config();
 import connectDB from "./config/db.js";
 import incidentRoutes from "./routes/incidentRoutes.js";
 import lookupRoutes from "./routes/lookup.routes.js";
+import usersRoutes from "./routes/usersRoutes.js";
 
 const startServer = async () => {
   try {
@@ -26,6 +27,8 @@ const startServer = async () => {
 
     app.use(express.json());
     app.use("/api/incidents", incidentRoutes);
+
+    app.use("/api/user", usersRoutes);
     app.use("/api", lookupRoutes);
 
     const PORT = process.env.PORT || 5000;
