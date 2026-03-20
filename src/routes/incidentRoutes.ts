@@ -7,9 +7,10 @@ import {
   getIncidentUpdates,
   getIncidentCommentsUpdates,
 } from "../controllers/incidentController.js";
+import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
-
+router.use(protect);
 router.get("/", getIncidents);
 router.get("/:id", getIncidentById);
 

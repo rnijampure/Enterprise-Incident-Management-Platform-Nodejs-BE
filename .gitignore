@@ -23,3 +23,9 @@ Thumbs.db
 # Optional IDE files
 .vscode/
 .idea/
+# Security: Local SSL Certificates
+*.pem
+*.key
+*.cert
+localhost+2-key.pem
+localhost+2.pem
