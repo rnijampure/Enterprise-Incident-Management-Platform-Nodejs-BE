@@ -30,7 +30,9 @@ const startServer = async () => {
       key: fs.readFileSync(path.resolve(__dirname, "../localhost+2-key.pem")),
       cert: fs.readFileSync(path.resolve(__dirname, "../localhost+2.pem")),
     };
-
+    // Define paths to your local certs
+    const keyPath = path.resolve(__dirname, "../localhost+2-key.pem");
+    const certPath = path.resolve(__dirname, "../localhost+2.pem");
     const allowedOrigin = process.env.CORS_ORIGIN || "https://localhost:5173";
 
     app.use(
@@ -48,11 +50,22 @@ const startServer = async () => {
     app.use("/api", lookupRoutes);
 
     const PORT = process.env.PORT || 5000;
-
-    // 2. Pass the typed options to https.createServer
-    https.createServer(options, app).listen(PORT, () => {
-      console.log(`🚀 Secure Server running on https://localhost:${PORT}`);
-    });
+    // Check if BOTH files exist (they only exist on your laptop)
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+      const options = {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath),
+      };
+      https.createServer(options, app).listen(PORT, () => {
+        console.log(`🔐 Local Dev: Secure Server on https://localhost:${PORT}`);
+      });
+    } else {
+      // CLOUD DEPLOYMENT: Vercel/Render/AWS will provide the SSL layer
+      // Your Node app just needs to listen on a standard port
+      app.listen(PORT, () => {
+        console.log(`🚀 Cloud Dev: Server running on port ${PORT}`);
+      });
+    }
   } catch (error) {
     console.error("Server failed to start:", error);
     process.exit(1);
