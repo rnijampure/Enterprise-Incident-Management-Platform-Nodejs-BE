@@ -28,9 +28,19 @@ const startServer = async () => {
     const isProduction = process.env.NODE_ENV === "production";
     const useHttps = process.env.USE_HTTPS === "true" && !isProduction;
 
+    const allowedOrigins = (
+      process.env.CORS_ORIGIN || "http://localhost:5173"
+    ).split(",");
+
     app.use(
       cors({
-        origin: process.env.CORS_ORIGIN || "https://localhost:5173",
+        origin: function (origin, callback) {
+          if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+          } else {
+            callback(new Error("Not allowed by CORS"));
+          }
+        },
         credentials: true,
       }),
     );
