@@ -1,13 +1,12 @@
-// backend/src/server.ts
 import dotenv from "dotenv";
 import express, { Application } from "express";
 import cors from "cors";
-import https, { ServerOptions } from "https";
+import https from "https";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import cookieParser from "cookie-parser";
-// Helper for ESM __dirname
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -23,40 +22,36 @@ const startServer = async () => {
     await connectDB();
 
     const app: Application = express();
+    const PORT = process.env.PORT || 5000;
 
-    const useHttps = process.env.USE_HTTPS === "true";
-
-    // 1. Properly typed ServerOptions
-    // Certificates are 2 levels up from src/server.ts (in project root)
-    const options: ServerOptions = {
-      key: fs.readFileSync(path.resolve(__dirname, "../localhost+2-key.pem")),
-      cert: fs.readFileSync(path.resolve(__dirname, "../localhost+2.pem")),
-    };
-    // Define paths to your local certs
-    const keyPath = path.resolve(__dirname, "../localhost+2-key.pem");
-    const certPath = path.resolve(__dirname, "../localhost+2.pem");
-    const allowedOrigin = process.env.CORS_ORIGIN || "https://localhost:5173";
+    // Logic: Only use HTTPS if explicitly requested AND not on Render/Production
+    const isProduction = process.env.NODE_ENV === "production";
+    const useHttps = process.env.USE_HTTPS === "true" && !isProduction;
 
     app.use(
       cors({
-        origin: allowedOrigin,
-        credentials: true, // Required for Refresh Token cookies
+        origin: process.env.CORS_ORIGIN || "https://localhost:5173",
+        credentials: true,
       }),
     );
-
     app.use(express.json());
     app.use(cookieParser());
-    // Routes
+
     app.use("/api/incidents", incidentRoutes);
     app.use("/api/user", usersRoutes);
     app.use("/api", lookupRoutes);
 
-    const PORT = process.env.PORT || 5000;
-    // Check if BOTH files exist (they only exist on your laptop)
     if (useHttps) {
+      // LOCAL DEVELOPMENT HTTPS
       try {
-        const keyPath = path.resolve(process.env.SSL_KEY_PATH!);
-        const certPath = path.resolve(process.env.SSL_CERT_PATH!);
+        const keyPath = path.resolve(
+          process.cwd(),
+          process.env.SSL_KEY_PATH || "localhost+2-key.pem",
+        );
+        const certPath = path.resolve(
+          process.cwd(),
+          process.env.SSL_CERT_PATH || "localhost+2.pem",
+        );
 
         const options = {
           key: fs.readFileSync(keyPath),
@@ -64,19 +59,23 @@ const startServer = async () => {
         };
 
         https.createServer(options, app).listen(PORT, () => {
-          console.log(`🔐 HTTPS Server running on https://localhost:${PORT}`);
+          console.log(`🔐 Local HTTPS Server: https://localhost:${PORT}`);
         });
-      } catch (err) {
-        console.error("❌ HTTPS setup failed:", err);
+      } catch (sslErr) {
+        console.error(
+          "❌ SSL File Error: Make sure .pem files are in the root folder.",
+        );
         process.exit(1);
       }
     } else {
+      // PRODUCTION / RENDER HTTP
+      // Render provides SSL at the load balancer, so the app stays as HTTP
       app.listen(PORT, () => {
-        console.log(`🚀 HTTP Server running on port ${PORT}`);
+        console.log(`🚀 Server running on port ${PORT} (HTTP)`);
       });
     }
   } catch (error) {
-    console.error("Server failed to start:", error);
+    console.error("Critical: Server failed to start:", error);
     process.exit(1);
   }
 };
