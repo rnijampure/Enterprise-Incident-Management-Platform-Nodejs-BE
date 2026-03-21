@@ -24,6 +24,8 @@ const startServer = async () => {
 
     const app: Application = express();
 
+    const useHttps = process.env.USE_HTTPS === "true";
+
     // 1. Properly typed ServerOptions
     // Certificates are 2 levels up from src/server.ts (in project root)
     const options: ServerOptions = {
@@ -51,19 +53,26 @@ const startServer = async () => {
 
     const PORT = process.env.PORT || 5000;
     // Check if BOTH files exist (they only exist on your laptop)
-    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
-      const options = {
-        key: fs.readFileSync(keyPath),
-        cert: fs.readFileSync(certPath),
-      };
-      https.createServer(options, app).listen(PORT, () => {
-        console.log(`🔐 Local Dev: Secure Server on https://localhost:${PORT}`);
-      });
+    if (useHttps) {
+      try {
+        const keyPath = path.resolve(process.env.SSL_KEY_PATH!);
+        const certPath = path.resolve(process.env.SSL_CERT_PATH!);
+
+        const options = {
+          key: fs.readFileSync(keyPath),
+          cert: fs.readFileSync(certPath),
+        };
+
+        https.createServer(options, app).listen(PORT, () => {
+          console.log(`🔐 HTTPS Server running on https://localhost:${PORT}`);
+        });
+      } catch (err) {
+        console.error("❌ HTTPS setup failed:", err);
+        process.exit(1);
+      }
     } else {
-      // CLOUD DEPLOYMENT: Vercel/Render/AWS will provide the SSL layer
-      // Your Node app just needs to listen on a standard port
       app.listen(PORT, () => {
-        console.log(`🚀 Cloud Dev: Server running on port ${PORT}`);
+        console.log(`🚀 HTTP Server running on port ${PORT}`);
       });
     }
   } catch (error) {
