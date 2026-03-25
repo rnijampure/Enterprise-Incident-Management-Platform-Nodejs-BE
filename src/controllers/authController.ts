@@ -5,6 +5,10 @@ import bcrypt from "bcryptjs";
 import User, { IUser } from "../models/User.js";
 
 export const logIn = async (req: Request, res: Response) => {
+  console.log("ENV CHECK:", {
+    access: process.env.ACCESS_TOKEN_SECRET,
+    refresh: process.env.REFRESH_TOKEN_SECRET,
+  });
   try {
     const { email, password } = req.body;
 
