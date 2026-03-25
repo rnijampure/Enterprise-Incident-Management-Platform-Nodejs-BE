@@ -24,35 +24,56 @@ const startServer = async () => {
     const app: Application = express();
     const PORT = process.env.PORT || 5000;
 
-    // Logic: Only use HTTPS if explicitly requested AND not on Render/Production
+    // Logic: Only use HTTPS if explicitly requested AND not in production
     const isProduction = process.env.NODE_ENV === "production";
     const useHttps = process.env.USE_HTTPS === "true" && !isProduction;
 
-    const allowedOrigins = (
-      process.env.CORS_ORIGIN || "http://localhost:5173"
-    ).split(",");
+    const defaultOrigins = [
+      "http://localhost:5173",
+      "https://localhost:5173",
+      "https://enterprise-incident-management-plat.vercel.app",
+      "https://enterprise-incident-management-platform.onrender.com", // ✅ FIXED (removed /api)
+    ];
 
+    const allowedOrigins = (
+      process.env.CORS_ORIGIN
+        ? process.env.CORS_ORIGIN.split(",")
+        : defaultOrigins
+    )
+      .map((o) => o.trim())
+      .filter(Boolean);
+
+    // ✅ CORS (handles preflight automatically)
     app.use(
       cors({
-        origin: function (origin, callback) {
-          if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-          } else {
-            callback(new Error("Not allowed by CORS"));
+        origin: (origin, callback) => {
+          if (!origin) return callback(null, true); // Postman, curl
+
+          if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
           }
+
+          console.error("❌ CORS blocked:", origin);
+          return callback(null, false);
         },
         credentials: true,
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
       }),
     );
+
+    // ❌ REMOVED problematic app.options()
+
     app.use(express.json());
     app.use(cookieParser());
 
+    // Routes
     app.use("/api/incidents", incidentRoutes);
     app.use("/api/user", usersRoutes);
     app.use("/api", lookupRoutes);
 
     if (useHttps) {
-      // LOCAL DEVELOPMENT HTTPS
+      // LOCAL HTTPS (DEV ONLY)
       try {
         const keyPath = path.resolve(
           process.cwd(),
@@ -78,8 +99,7 @@ const startServer = async () => {
         process.exit(1);
       }
     } else {
-      // PRODUCTION / RENDER HTTP
-      // Render provides SSL at the load balancer, so the app stays as HTTP
+      // HTTP (Production / Render)
       app.listen(PORT, () => {
         console.log(`🚀 Server running on port ${PORT} (HTTP)`);
       });
